@@ -1,0 +1,19 @@
+{
+  "name": "solana-node-labs",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "@bonfida/spl-name-service": "^3.0.3",
+    "@solana-developers/helpers": "^2.5.5",
+    "@solana/web3.js": "^1.95.3",
+    "esrun": "^3.2.26",
+    "typescript": "^5.6.2"
+  }
+}
