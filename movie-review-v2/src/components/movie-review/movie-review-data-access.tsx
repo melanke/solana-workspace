@@ -116,7 +116,17 @@ export function useMovieReviewProgramAccount({
     },
   });
 
+  const deleteMovieReview = useMutation({
+    mutationFn: () =>
+      program.methods.deleteMovieReview(account.account.title).rpc(),
+    onSuccess: (tx) => {
+      transactionToast(tx);
+      return accounts.refetch();
+    },
+  });
+
   return {
     updateMovieReview,
+    deleteMovieReview,
   };
 }

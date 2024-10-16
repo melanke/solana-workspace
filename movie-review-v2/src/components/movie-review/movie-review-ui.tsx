@@ -8,16 +8,34 @@ import {
 } from "./movie-review-data-access";
 import { ExplorerLink } from "../cluster/cluster-ui";
 import { ellipsify } from "../ui/ui-layout";
-import { Keypair, PublicKey } from "@solana/web3.js";
 import { ProgramAccount } from "@coral-xyz/anchor";
+import { quickDialogForm } from "../ui/quickDialogForm";
+import Swal from "sweetalert2";
 
 export function MovieReviewCreate() {
   const { initializeTokenMint, addMovieReview, tokenMintAccount } =
     useMovieReviewProgram();
 
+  const handleCreate = async () => {
+    const [title, description, rating] = await quickDialogForm({
+      title: "Create Movie Review",
+      inputs: [
+        { label: "Title", type: "text" },
+        { label: "Description", type: "textarea" },
+        { label: "Rating", type: "number" },
+      ],
+    });
+
+    addMovieReview.mutateAsync({
+      title,
+      description,
+      rating: parseInt(rating),
+    });
+  };
+
   return (
     <div className="flex gap-4 justify-center">
-      {!tokenMintAccount.data?.value && (
+      {!tokenMintAccount.data?.value ? (
         <button
           className="btn btn-xs lg:btn-md btn-primary"
           onClick={() => initializeTokenMint.mutateAsync()}
@@ -25,21 +43,15 @@ export function MovieReviewCreate() {
         >
           Initialize token mint {initializeTokenMint.isPending && "..."}
         </button>
+      ) : (
+        <button
+          className="btn btn-xs lg:btn-md btn-primary"
+          onClick={handleCreate}
+          disabled={addMovieReview.isPending}
+        >
+          Add movie review {addMovieReview.isPending && "..."}
+        </button>
       )}
-
-      <button
-        className="btn btn-xs lg:btn-md btn-primary"
-        onClick={() =>
-          addMovieReview.mutateAsync({
-            title: "Test",
-            description: "Test Desc",
-            rating: 5,
-          })
-        }
-        disabled={addMovieReview.isPending}
-      >
-        Add movie review {addMovieReview.isPending && "..."}
-      </button>
     </div>
   );
 }
@@ -88,9 +100,50 @@ function MovieReviewCard({
 }: {
   account: ProgramAccount<MovieReview>;
 }) {
-  const { updateMovieReview } = useMovieReviewProgramAccount({
-    account,
-  });
+  const { updateMovieReview, deleteMovieReview } = useMovieReviewProgramAccount(
+    {
+      account,
+    }
+  );
+
+  const handleUpdate = async () => {
+    const [description, rating] = await quickDialogForm({
+      title: "Update Movie Review",
+      inputs: [
+        { label: "Description", type: "textarea" },
+        { label: "Rating", type: "number" },
+      ],
+    });
+
+    updateMovieReview.mutateAsync({
+      description,
+      rating: parseInt(rating),
+    });
+  };
+
+  const handleDelete = async () => {
+    await Swal.fire({
+      title: "Are you sure you want to delete this movie review?",
+      showCancelButton: true,
+      confirmButtonText: "Delete",
+      showClass: {
+        popup: `
+          animate__animated
+          animate__fadeInUp
+          animate__faster
+        `,
+      },
+      hideClass: {
+        popup: `
+          animate__animated
+          animate__fadeOutDown
+          animate__faster
+        `,
+      },
+    });
+
+    await deleteMovieReview.mutateAsync();
+  };
 
   return (
     <div className="card card-bordered border-base-300 border-4 text-neutral-content">
@@ -104,15 +157,17 @@ function MovieReviewCard({
           <div className="card-actions justify-around">
             <button
               className="btn btn-xs lg:btn-md btn-outline"
-              onClick={() =>
-                updateMovieReview.mutateAsync({
-                  description: "Updated Desc",
-                  rating: 1,
-                })
-              }
+              onClick={handleUpdate}
               disabled={updateMovieReview.isPending}
             >
               Update
+            </button>
+            <button
+              className="btn btn-xs lg:btn-md btn-outline"
+              onClick={handleDelete}
+              disabled={deleteMovieReview.isPending}
+            >
+              Delete
             </button>
           </div>
           <div className="text-center space-y-4">
