@@ -111,26 +111,6 @@
       "returns": "u8"
     },
     {
-      "name": "is_betting_period_ended",
-      "discriminator": [
-        100,
-        169,
-        252,
-        160,
-        17,
-        1,
-        93,
-        100
-      ],
-      "accounts": [
-        {
-          "name": "game"
-        }
-      ],
-      "args": [],
-      "returns": "bool"
-    },
-    {
       "name": "place_bet",
       "discriminator": [
         222,
@@ -357,6 +337,11 @@
       "code": 6009,
       "name": "InvalidCreator",
       "msg": "Invalid creator"
+    },
+    {
+      "code": 6010,
+      "name": "BetDoesNotBelongToGame",
+      "msg": "A aposta não pertence a este jogo"
     }
   ],
   "types": [
@@ -365,6 +350,10 @@
       "type": {
         "kind": "struct",
         "fields": [
+          {
+            "name": "game",
+            "type": "pubkey"
+          },
           {
             "name": "bettor",
             "type": "pubkey"
@@ -480,10 +469,8 @@
             }
           },
           {
-            "name": "betting_period_ended_cache",
-            "type": {
-              "option": "bool"
-            }
+            "name": "betting_period_ended",
+            "type": "bool"
           },
           {
             "name": "drawn_number_cache",

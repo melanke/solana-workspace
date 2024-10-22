@@ -23,10 +23,19 @@ export type Game = {
   lastBlockhash: number[];
   combinedHash: number[];
   betsPerNumber: anchor.BN[];
-  bettingPeriodEndedCache: boolean | null;
+  bettingPeriodEnded: boolean;
   drawnNumberCache: number | null;
   numberOfBets: anchor.BN;
   valueProvidedToWinners: anchor.BN;
+};
+
+export type Bet = {
+  game: PublicKey;
+  bettor: PublicKey;
+  value: anchor.BN;
+  number: number;
+  blockhash: number[];
+  prizeClaimed: boolean;
 };
 
 export function useGotCritterProgram() {
@@ -44,6 +53,20 @@ export function useGotCritterProgram() {
   const games = useQuery({
     queryKey: ["game", "all", { cluster }],
     queryFn: () => program.account.game.all(),
+  });
+
+  const currentSlot = useQuery({
+    queryKey: ["current-slot", { cluster }],
+    refetchInterval: 100,
+    queryFn: () => connection.getSlot(),
+  });
+
+  const currentBlockhash = useQuery({
+    queryKey: ["current-blockhash", { cluster }],
+    refetchInterval: 100,
+    queryFn: async () => {
+      return await connection.getLatestBlockhash();
+    },
   });
 
   const createGame = useMutation({
@@ -72,6 +95,8 @@ export function useGotCritterProgram() {
     programAccount,
     games,
     createGame,
+    currentSlot,
+    currentBlockhash,
   };
 }
 
@@ -92,13 +117,26 @@ export function useGameProgramAccount({
       program.methods.drawnNumber().accounts({ game: game.publicKey }).view(),
   });
 
-  const isBettingPeriodEnded = useQuery({
-    queryKey: ["betting-period-ended", { cluster, game: game.publicKey }],
+  const userBets = useQuery({
+    queryKey: [
+      "user-bets",
+      { cluster, game: game.publicKey, user: provider.publicKey },
+    ],
     queryFn: () =>
-      program.methods
-        .isBettingPeriodEnded()
-        .accounts({ game: game.publicKey })
-        .view(),
+      program.account.bet.all([
+        {
+          memcmp: {
+            offset: 8, // Pula o discriminador
+            bytes: game.publicKey.toBase58(),
+          },
+        },
+        {
+          memcmp: {
+            offset: 40, // 8 (discriminador) + 32 (game pubkey)
+            bytes: provider.publicKey.toBase58(),
+          },
+        },
+      ]),
   });
 
   const placeBet = useMutation({
@@ -109,13 +147,62 @@ export function useGameProgramAccount({
         .rpc(),
     onSuccess: (signature) => {
       transactionToast(signature);
-      return games.refetch();
+      return Promise.all([userBets.refetch(), games.refetch()]);
     },
   });
 
   return {
     drawnNumber,
-    isBettingPeriodEnded,
     placeBet,
+    userBets,
+  };
+}
+
+export function useBetProgramAccount({
+  bet,
+}: {
+  bet: anchor.ProgramAccount<Bet>;
+}) {
+  const transactionToast = useTransactionToast();
+  const { cluster } = useCluster();
+  const provider = useAnchorProvider();
+  const program = getGotcritterProgram(provider);
+
+  const prize = useQuery({
+    queryKey: ["prize", { cluster, bet: bet.publicKey }],
+    refetchInterval: 5000,
+    queryFn: () =>
+      program.methods
+        .prize()
+        .accounts({ bet: bet.publicKey, game: bet.account.game })
+        .view(),
+  });
+
+  const printPrizeMsg = useMutation({
+    mutationFn: () =>
+      program.methods
+        .prize()
+        .accounts({ bet: bet.publicKey, game: bet.account.game })
+        .rpc(),
+    onSuccess: (signature) => {
+      transactionToast(signature);
+    },
+  });
+
+  const claimPrize = useMutation({
+    mutationFn: () =>
+      program.methods
+        .claimPrize()
+        .accounts({ bet: bet.publicKey, game: bet.account.game })
+        .rpc(),
+    onSuccess: (signature) => {
+      transactionToast(signature);
+    },
+  });
+
+  return {
+    prize,
+    printPrizeMsg,
+    claimPrize,
   };
 }

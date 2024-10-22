@@ -117,26 +117,6 @@ export type Gotcritter = {
       "returns": "u8"
     },
     {
-      "name": "isBettingPeriodEnded",
-      "discriminator": [
-        100,
-        169,
-        252,
-        160,
-        17,
-        1,
-        93,
-        100
-      ],
-      "accounts": [
-        {
-          "name": "game"
-        }
-      ],
-      "args": [],
-      "returns": "bool"
-    },
-    {
       "name": "placeBet",
       "discriminator": [
         222,
@@ -363,6 +343,11 @@ export type Gotcritter = {
       "code": 6009,
       "name": "invalidCreator",
       "msg": "Invalid creator"
+    },
+    {
+      "code": 6010,
+      "name": "betDoesNotBelongToGame",
+      "msg": "A aposta não pertence a este jogo"
     }
   ],
   "types": [
@@ -371,6 +356,10 @@ export type Gotcritter = {
       "type": {
         "kind": "struct",
         "fields": [
+          {
+            "name": "game",
+            "type": "pubkey"
+          },
           {
             "name": "bettor",
             "type": "pubkey"
@@ -486,10 +475,8 @@ export type Gotcritter = {
             }
           },
           {
-            "name": "bettingPeriodEndedCache",
-            "type": {
-              "option": "bool"
-            }
+            "name": "bettingPeriodEnded",
+            "type": "bool"
           },
           {
             "name": "drawnNumberCache",

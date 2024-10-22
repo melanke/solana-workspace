@@ -104,14 +104,6 @@ describe("gotcritter", () => {
         })
         .view();
       expect(Number(prize)).toBe(0);
-
-      const bettingPeriodEnded = await program.methods
-        .isBettingPeriodEnded()
-        .accounts({
-          game: gameKeypair.publicKey,
-        })
-        .view();
-      expect(bettingPeriodEnded).toBe(false);
     },
     15 * 1000
   );
