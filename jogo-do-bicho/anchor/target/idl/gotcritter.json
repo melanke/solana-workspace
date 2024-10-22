@@ -105,9 +105,6 @@
       "accounts": [
         {
           "name": "game"
-        },
-        {
-          "name": "bet"
         }
       ],
       "args": [],
@@ -314,52 +311,52 @@
     {
       "code": 6000,
       "name": "GameClosed",
-      "msg": "The game is closed for new participants."
+      "msg": "The game is closed for new participants"
     },
     {
       "code": 6001,
       "name": "InvalidNumber",
-      "msg": "Invalid number. Must be between 1 and 25."
+      "msg": "Invalid number. Must be between 1 and 25"
     },
     {
       "code": 6002,
       "name": "BettingPeriodEnded",
-      "msg": "The betting period has ended."
+      "msg": "The betting period has ended"
     },
     {
       "code": 6003,
       "name": "GameNotFinished",
-      "msg": "The game has not finished yet."
+      "msg": "The game has not finished yet"
     },
     {
       "code": 6004,
       "name": "InvalidValue",
-      "msg": "Invalid value."
+      "msg": "Invalid value. The minimum betting value is 0.001 SOL"
     },
     {
       "code": 6005,
       "name": "NoPrize",
-      "msg": "No prize for this bet."
+      "msg": "No prize for this bet"
     },
     {
       "code": 6006,
       "name": "BetDoesNotBelongToBettor",
-      "msg": "The bet does not belong to the bettor."
+      "msg": "The bet does not belong to the bettor"
     },
     {
       "code": 6007,
       "name": "PrizeAlreadyClaimed",
-      "msg": "The prize for this bet has already been claimed."
+      "msg": "The prize for this bet has already been claimed"
     },
     {
       "code": 6008,
       "name": "InsufficientBalance",
-      "msg": "Insufficient balance to pay the prize."
+      "msg": "Insufficient balance to pay the prize"
     },
     {
       "code": 6009,
       "name": "InvalidCreator",
-      "msg": "Invalid creator."
+      "msg": "Invalid creator"
     }
   ],
   "types": [

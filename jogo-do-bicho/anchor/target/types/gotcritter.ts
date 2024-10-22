@@ -111,9 +111,6 @@ export type Gotcritter = {
       "accounts": [
         {
           "name": "game"
-        },
-        {
-          "name": "bet"
         }
       ],
       "args": [],
@@ -320,52 +317,52 @@ export type Gotcritter = {
     {
       "code": 6000,
       "name": "gameClosed",
-      "msg": "The game is closed for new participants."
+      "msg": "The game is closed for new participants"
     },
     {
       "code": 6001,
       "name": "invalidNumber",
-      "msg": "Invalid number. Must be between 1 and 25."
+      "msg": "Invalid number. Must be between 1 and 25"
     },
     {
       "code": 6002,
       "name": "bettingPeriodEnded",
-      "msg": "The betting period has ended."
+      "msg": "The betting period has ended"
     },
     {
       "code": 6003,
       "name": "gameNotFinished",
-      "msg": "The game has not finished yet."
+      "msg": "The game has not finished yet"
     },
     {
       "code": 6004,
       "name": "invalidValue",
-      "msg": "Invalid value."
+      "msg": "Invalid value. The minimum betting value is 0.001 SOL"
     },
     {
       "code": 6005,
       "name": "noPrize",
-      "msg": "No prize for this bet."
+      "msg": "No prize for this bet"
     },
     {
       "code": 6006,
       "name": "betDoesNotBelongToBettor",
-      "msg": "The bet does not belong to the bettor."
+      "msg": "The bet does not belong to the bettor"
     },
     {
       "code": 6007,
       "name": "prizeAlreadyClaimed",
-      "msg": "The prize for this bet has already been claimed."
+      "msg": "The prize for this bet has already been claimed"
     },
     {
       "code": 6008,
       "name": "insufficientBalance",
-      "msg": "Insufficient balance to pay the prize."
+      "msg": "Insufficient balance to pay the prize"
     },
     {
       "code": 6009,
       "name": "invalidCreator",
-      "msg": "Invalid creator."
+      "msg": "Invalid creator"
     }
   ],
   "types": [

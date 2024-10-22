@@ -1,6 +1,8 @@
 import * as anchor from "@coral-xyz/anchor";
 import { Program } from "@coral-xyz/anchor";
 import { Gotcritter } from "../target/types/gotcritter";
+import { jest, expect, describe, it } from "@jest/globals";
+
 jest.setTimeout(70 * 1000);
 
 describe("gotcritter", () => {
@@ -9,29 +11,10 @@ describe("gotcritter", () => {
   const program = anchor.workspace.Gotcritter as Program<Gotcritter>;
   const provider = anchor.getProvider();
 
-  //   it("Deve criar um novo jogo", async () => {
-  //     const gameKeypair = anchor.web3.Keypair.generate();
-
-  //     await program.methods
-  //       .createGame(true, null)
-  //       .accounts({
-  //         game: gameKeypair.publicKey,
-  //         creator: provider.publicKey,
-  //       })
-  //       .signers([gameKeypair])
-  //       .rpc();
-
-  //     const gameAccount = await program.account.game.fetch(gameKeypair.publicKey);
-  //     expect(gameAccount.creator.toString()).toBe(provider.publicKey?.toString());
-  //     expect(gameAccount.open).toBe(true);
-  //     expect(gameAccount.totalValue.toNumber()).toBe(0);
-  //   });
-
   it(
     "Deve permitir fazer uma aposta",
     async () => {
       const gameKeypair = anchor.web3.Keypair.generate();
-      const bettor = anchor.web3.Keypair.generate();
 
       // Criar o jogo
       await program.methods
@@ -42,6 +25,8 @@ describe("gotcritter", () => {
         })
         .signers([gameKeypair])
         .rpc();
+
+      const bettor = anchor.web3.Keypair.generate();
 
       // Financiar a conta do apostador
       const airDropSignature = await provider.connection.requestAirdrop(
@@ -106,7 +91,6 @@ describe("gotcritter", () => {
         .drawnNumber()
         .accounts({
           game: gameKeypair.publicKey,
-          bet: betPDA,
         })
         .view();
 

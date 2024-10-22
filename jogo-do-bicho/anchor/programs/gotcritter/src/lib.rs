@@ -107,12 +107,11 @@ pub mod gotcritter {
     }
 
     // Method to check the prize of a bet
-    pub fn drawn_number(ctx: Context<CheckPrize>) -> Result<u8> {
+    pub fn drawn_number(ctx: Context<CheckDrawnNumber>) -> Result<u8> {
         let game = &ctx.accounts.game;
-        let bet = &ctx.accounts.bet;
 
         // Calcula o prêmio
-        let (drawn_number, _) = game.calculate_prize(bet)?;
+        let drawn_number = game.calculate_drawn_number()?;
         
         Ok(drawn_number)
     }
@@ -122,8 +121,11 @@ pub mod gotcritter {
         let game = &ctx.accounts.game;
         let bet = &ctx.accounts.bet;
 
+        // Calcula o número sorteado
+        let drawn_number = game.calculate_drawn_number()?;
+
         // Calcula o prêmio
-        let (_, prize) = game.calculate_prize(bet)?;
+        let prize = game.calculate_prize(bet, drawn_number)?;
         
         Ok(prize)
     }
@@ -147,7 +149,8 @@ pub mod gotcritter {
         require!(!ctx.accounts.bet.prize_claimed, CustomError::PrizeAlreadyClaimed);
 
         // Calculate the prize
-        let (drawn_number, prize) = ctx.accounts.game.calculate_prize(&ctx.accounts.bet)?;
+        let drawn_number = ctx.accounts.game.calculate_drawn_number()?;
+        let prize = ctx.accounts.game.calculate_prize(&ctx.accounts.bet, drawn_number)?;
 
         if prize > 0 {
             // Check if the game has enough balance to pay the prize
@@ -246,6 +249,11 @@ pub struct PlaceBet<'info> {
 }
 
 #[derive(Accounts)]
+pub struct CheckDrawnNumber<'info> {
+    pub game: Account<'info, Game>,
+}
+
+#[derive(Accounts)]
 pub struct CheckPrize<'info> {
     pub game: Account<'info, Game>,
     pub bet: Account<'info, Bet>,
@@ -306,25 +314,25 @@ pub struct Bet {
 
 #[error_code]
 pub enum CustomError {
-    #[msg("The game is closed for new participants.")]
+    #[msg("The game is closed for new participants")]
     GameClosed,
-    #[msg("Invalid number. Must be between 1 and 25.")]
+    #[msg("Invalid number. Must be between 1 and 25")]
     InvalidNumber,
-    #[msg("The betting period has ended.")]
+    #[msg("The betting period has ended")]
     BettingPeriodEnded,
-    #[msg("The game has not finished yet.")]
+    #[msg("The game has not finished yet")]
     GameNotFinished,
-    #[msg("Invalid value.")]
+    #[msg("Invalid value. The minimum betting value is 0.001 SOL")]
     InvalidValue,
-    #[msg("No prize for this bet.")]
+    #[msg("No prize for this bet")]
     NoPrize,
-    #[msg("The bet does not belong to the bettor.")]
+    #[msg("The bet does not belong to the bettor")]
     BetDoesNotBelongToBettor,
-    #[msg("The prize for this bet has already been claimed.")]
+    #[msg("The prize for this bet has already been claimed")]
     PrizeAlreadyClaimed,
-    #[msg("Insufficient balance to pay the prize.")]
+    #[msg("Insufficient balance to pay the prize")]
     InsufficientBalance,
-    #[msg("Invalid creator.")]
+    #[msg("Invalid creator")]
     InvalidCreator,
 }
 
@@ -378,7 +386,7 @@ impl Game {
         Ok(Clock::get()?.slot >= self.initial_slots + 1000 && last_digits.chars().nth(0) == last_digits.chars().nth(1))
     }
 
-    pub fn calculate_prize(&self, bet: &Bet) -> Result<(u8, u64)> {
+    pub fn calculate_drawn_number(&self) -> Result<u8> {
         // Check if the drawn number is cached
         let drawn_number = if let Some(cache) = self.drawn_number_cache {
             cache
@@ -391,6 +399,10 @@ impl Game {
             ((sum % 25) + 1) as u8
         };
 
+        Ok(drawn_number)
+    }
+
+    pub fn calculate_prize(&self, bet: &Bet, drawn_number: u8) -> Result<u64> {
         // Calculate the prize
         let total_bet_on_number = self.bets_per_number[(drawn_number - 1) as usize];
         let prize = if total_bet_on_number > 0 && bet.number == drawn_number {
@@ -399,6 +411,6 @@ impl Game {
             0
         };
 
-        Ok((drawn_number, prize))
+        Ok(prize)
     }
 }

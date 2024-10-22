@@ -1,20 +1,20 @@
-'use client';
+"use client";
 
-import { useWallet } from '@solana/wallet-adapter-react';
-import { ExplorerLink } from '../cluster/cluster-ui';
-import { WalletButton } from '../solana/solana-provider';
-import { AppHero, ellipsify } from '../ui/ui-layout';
-import { useBasicProgram } from './basic-data-access';
-import { BasicCreate, BasicProgram } from './basic-ui';
+import { useWallet } from "@solana/wallet-adapter-react";
+import { ExplorerLink } from "../cluster/cluster-ui";
+import { WalletButton } from "../solana/solana-provider";
+import { AppHero, ellipsify } from "../ui/ui-layout";
+import { useGotCritterProgram } from "./gotcritter-data-access";
+import { GotCritterCreate, GotCritterProgram } from "./gotcritter-ui";
 
-export default function BasicFeature() {
+export default function GotCritterFeature() {
   const { publicKey } = useWallet();
-  const { programId } = useBasicProgram();
+  const { programId } = useGotCritterProgram();
 
   return publicKey ? (
     <div>
       <AppHero
-        title="Basic"
+        title="GotCritter"
         subtitle={'Run the program by clicking the "Run program" button.'}
       >
         <p className="mb-6">
@@ -23,9 +23,9 @@ export default function BasicFeature() {
             label={ellipsify(programId.toString())}
           />
         </p>
-        <BasicCreate />
+        <GotCritterCreate />
       </AppHero>
-      <BasicProgram />
+      <GotCritterProgram />
     </div>
   ) : (
     <div className="max-w-4xl mx-auto">
