@@ -329,7 +329,7 @@
     {
       "code": 6009,
       "name": "InsufficientBalance",
-      "msg": "Insufficient balance to pay the prize"
+      "msg": "Sorry, something strange happened and we don't have enough balance to pay the prize"
     },
     {
       "code": 6010,

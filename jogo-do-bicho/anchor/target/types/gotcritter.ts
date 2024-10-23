@@ -335,7 +335,7 @@ export type Gotcritter = {
     {
       "code": 6009,
       "name": "insufficientBalance",
-      "msg": "Insufficient balance to pay the prize"
+      "msg": "Sorry, something strange happened and we don't have enough balance to pay the prize"
     },
     {
       "code": 6010,
