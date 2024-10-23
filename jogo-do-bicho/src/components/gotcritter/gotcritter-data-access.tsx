@@ -12,7 +12,7 @@ import toast from "react-hot-toast";
 import { useCluster } from "../cluster/cluster-data-access";
 import { useAnchorProvider } from "../solana/solana-provider";
 import { useTransactionToast } from "../ui/ui-layout";
-import { PublicKey } from "@solana/web3.js";
+import { PublicKey, SystemProgram } from "@solana/web3.js";
 
 export type Game = {
   creator: PublicKey;
@@ -178,22 +178,15 @@ export function useBetProgramAccount({
         .view(),
   });
 
-  const printPrizeMsg = useMutation({
-    mutationFn: () =>
-      program.methods
-        .prize()
-        .accounts({ bet: bet.publicKey, game: bet.account.game })
-        .rpc(),
-    onSuccess: (signature) => {
-      transactionToast(signature);
-    },
-  });
-
   const claimPrize = useMutation({
     mutationFn: () =>
       program.methods
         .claimPrize()
-        .accounts({ bet: bet.publicKey, game: bet.account.game })
+        .accounts({
+          bet: bet.publicKey,
+          game: bet.account.game,
+          bettor: provider.publicKey,
+        })
         .rpc(),
     onSuccess: (signature) => {
       transactionToast(signature);
@@ -202,7 +195,6 @@ export function useBetProgramAccount({
 
   return {
     prize,
-    printPrizeMsg,
     claimPrize,
   };
 }

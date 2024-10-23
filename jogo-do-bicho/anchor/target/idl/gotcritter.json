@@ -34,13 +34,6 @@
           "writable": true
         },
         {
-          "name": "creator",
-          "writable": true,
-          "relations": [
-            "game"
-          ]
-        },
-        {
           "name": "system_program",
           "address": "11111111111111111111111111111111"
         }
@@ -310,36 +303,41 @@
     },
     {
       "code": 6004,
+      "name": "CantCloseGame",
+      "msg": "The game can't be closed yet, waiting for the prizes to be claimed"
+    },
+    {
+      "code": 6005,
       "name": "InvalidValue",
       "msg": "Invalid value. The minimum betting value is 0.001 SOL"
     },
     {
-      "code": 6005,
+      "code": 6006,
       "name": "NoPrize",
       "msg": "No prize for this bet"
     },
     {
-      "code": 6006,
+      "code": 6007,
       "name": "BetDoesNotBelongToBettor",
       "msg": "The bet does not belong to the bettor"
     },
     {
-      "code": 6007,
+      "code": 6008,
       "name": "PrizeAlreadyClaimed",
       "msg": "The prize for this bet has already been claimed"
     },
     {
-      "code": 6008,
+      "code": 6009,
       "name": "InsufficientBalance",
       "msg": "Insufficient balance to pay the prize"
     },
     {
-      "code": 6009,
+      "code": 6010,
       "name": "InvalidCreator",
       "msg": "Invalid creator"
     },
     {
-      "code": 6010,
+      "code": 6011,
       "name": "BetDoesNotBelongToGame",
       "msg": "A aposta não pertence a este jogo"
     }

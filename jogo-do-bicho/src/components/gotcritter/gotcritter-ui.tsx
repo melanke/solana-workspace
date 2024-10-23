@@ -217,7 +217,7 @@ function BetCard({
   bet: ProgramAccount<Bet>;
   game: ProgramAccount<Game>;
 }) {
-  const { prize, printPrizeMsg, claimPrize } = useBetProgramAccount({ bet });
+  const { prize, claimPrize } = useBetProgramAccount({ bet });
 
   return (
     <div className="flex flex-col gap-1 bg-base-300 rounded p-2">
@@ -229,7 +229,7 @@ function BetCard({
         <span className="font-bold">Value:</span>{" "}
         {bet.account.value.div(new BN(LAMPORTS_PER_SOL)).toString()} SOL
       </div>
-      <div onClick={() => printPrizeMsg.mutateAsync()}>
+      <div>
         <span className="font-bold">Estimated Prize:</span>{" "}
         {prize.data?.div(new BN(LAMPORTS_PER_SOL)).toString()} SOL
       </div>

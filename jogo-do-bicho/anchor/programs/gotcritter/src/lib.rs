@@ -102,7 +102,7 @@ pub mod gotcritter {
             number,
             value,
             timestamp: Clock::get()?.unix_timestamp,
-            bet: ctx.accounts.bet.key(),
+            bet: bet.key(),
         });
 
         Ok(())
@@ -134,60 +134,34 @@ pub mod gotcritter {
 
     // Method to claim the prize of a bet
     pub fn claim_prize(ctx: Context<ClaimPrize>) -> Result<()> {
-        // Check if the betting period has ended
-        require!(ctx.accounts.game.betting_period_ended, CustomError::GameNotFinished);
-        
-        // Check if the prize has already been claimed
-        require!(!ctx.accounts.bet.prize_claimed, CustomError::PrizeAlreadyClaimed);
+        let game = &mut ctx.accounts.game;
+        let bet = &ctx.accounts.bet;
 
-        // Calculate the prize
-        let drawn_number = ctx.accounts.game.calculate_drawn_number()?;
-        let prize = ctx.accounts.game.calculate_prize(&ctx.accounts.bet, drawn_number)?;
+        // Check if the betting period has ended
+        require!(game.betting_period_ended, CustomError::GameNotFinished);
+
+        // Check if the prize has already been claimed
+        require!(!bet.prize_claimed, CustomError::PrizeAlreadyClaimed);        
+
+        // Calcular o prêmio
+        let drawn_number = game.calculate_drawn_number()?;
+        let prize = game.calculate_prize(bet, drawn_number)?;
 
         if prize > 0 {
-            // Check if the game has enough balance to pay the prize
-            let game_balance = ctx.accounts.game.to_account_info().lamports();
+            // Verificar se o jogo tem saldo suficiente para pagar o prêmio
+            let game_balance = game.to_account_info().lamports();
             require!(game_balance >= prize, CustomError::InsufficientBalance);
 
-            // Transfer the prize to the bettor
-            let transfer_instruction = system_instruction::transfer(
-                ctx.accounts.game.to_account_info().key,
-                ctx.accounts.bettor.key,
-                prize,
-            );
+            // Transferir o prêmio para o apostador
+            **game.to_account_info().try_borrow_mut_lamports()? -= prize;
+            **ctx.accounts.bettor.to_account_info().try_borrow_mut_lamports()? += prize;
 
-            invoke(
-                &transfer_instruction,
-                &[
-                    ctx.accounts.game.to_account_info(),
-                    ctx.accounts.bettor.to_account_info(),
-                    ctx.accounts.system_program.to_account_info(),
-                ],
-            )?;
+            // Atualizar o valor total fornecido aos vencedores
+            game.value_provided_to_winners += prize;
 
-            // Mark the prize as claimed
-            ctx.accounts.bet.prize_claimed = true;
-
-            // Update the total value provided to winners
-            ctx.accounts.game.value_provided_to_winners += prize;
-
-            // Check if all prizes have been paid
-            if ctx.accounts.game.value_provided_to_winners == ctx.accounts.game.total_value {
-                // Emit an event informing that the game has ended
-                emit!(GameEnded {
-                    game: ctx.accounts.game.key(),
-                    creator: ctx.accounts.creator.key(),
-                    total_value: ctx.accounts.game.total_value,
-                    timestamp: Clock::get()?.unix_timestamp,
-                });
-            }
-
-            // Update the game caches
-            ctx.accounts.game.drawn_number_cache = Some(drawn_number);
-
-            // Emit an event informing that the prize was claimed
+            // Emitir um evento informando que o prêmio foi reivindicado
             emit!(PrizeClaimed {
-                game: ctx.accounts.game.key(),
+                game: game.key(),
                 bettor: ctx.accounts.bettor.key(),
                 drawn_number,
                 prize_value: prize,
@@ -255,23 +229,17 @@ pub struct CheckPrize<'info> {
 
 #[derive(Accounts)]
 pub struct ClaimPrize<'info> {
-    #[account(
-        mut,
-        close = creator,
-        has_one = creator @ CustomError::InvalidCreator,
-        constraint = game.value_provided_to_winners == game.total_value @ CustomError::CantCloseGame
-    )]
+    #[account(mut)]
     pub game: Account<'info, Game>,
     #[account(mut)]
     pub bettor: Signer<'info>,
     #[account(
         mut,
-        constraint = bet.bettor == *bettor.key @ CustomError::BetDoesNotBelongToBettor
+        constraint = bet.bettor == bettor.key() @ CustomError::BetDoesNotBelongToBettor,
+        constraint = bet.game == game.key() @ CustomError::BetDoesNotBelongToGame,
+        close = bettor
     )]
     pub bet: Account<'info, Bet>,
-    #[account(mut)]
-    /// CHECK: Este é o criador do jogo, verificado pela constraint has_one no account game
-    pub creator: AccountInfo<'info>,
     pub system_program: Program<'info, System>,
 }
 

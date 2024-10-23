@@ -40,13 +40,6 @@ export type Gotcritter = {
           "writable": true
         },
         {
-          "name": "creator",
-          "writable": true,
-          "relations": [
-            "game"
-          ]
-        },
-        {
           "name": "systemProgram",
           "address": "11111111111111111111111111111111"
         }
@@ -316,36 +309,41 @@ export type Gotcritter = {
     },
     {
       "code": 6004,
+      "name": "cantCloseGame",
+      "msg": "The game can't be closed yet, waiting for the prizes to be claimed"
+    },
+    {
+      "code": 6005,
       "name": "invalidValue",
       "msg": "Invalid value. The minimum betting value is 0.001 SOL"
     },
     {
-      "code": 6005,
+      "code": 6006,
       "name": "noPrize",
       "msg": "No prize for this bet"
     },
     {
-      "code": 6006,
+      "code": 6007,
       "name": "betDoesNotBelongToBettor",
       "msg": "The bet does not belong to the bettor"
     },
     {
-      "code": 6007,
+      "code": 6008,
       "name": "prizeAlreadyClaimed",
       "msg": "The prize for this bet has already been claimed"
     },
     {
-      "code": 6008,
+      "code": 6009,
       "name": "insufficientBalance",
       "msg": "Insufficient balance to pay the prize"
     },
     {
-      "code": 6009,
+      "code": 6010,
       "name": "invalidCreator",
       "msg": "Invalid creator"
     },
     {
-      "code": 6010,
+      "code": 6011,
       "name": "betDoesNotBelongToGame",
       "msg": "A aposta não pertence a este jogo"
     }
