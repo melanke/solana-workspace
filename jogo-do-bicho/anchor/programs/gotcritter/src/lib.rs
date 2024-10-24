@@ -7,6 +7,8 @@ use hex;
 
 declare_id!("GsxEDNRJbGhMADyosnm9R2HW6tL4VS2vrpwVhBZkFQaV");
 
+const BETTING_PERIOD_BLOCKS: u64 = 100; // TODO: instead of using a hardcoded value, the game should have a parameter for the betting period in slots (and maybe we don't need initial_slots, only the ending_slots)
+
 #[program]
 pub mod gotcritter {
     use super::*;
@@ -354,7 +356,7 @@ impl Game {
     pub fn calc_betting_period_ended(&self) -> Result<bool> {
         let last_blockhash_str = hex::encode(self.last_blockhash); // Convert the last blockhash to hexadecimal string
         let last_digits = &last_blockhash_str[last_blockhash_str.len()-2..]; // Get the last two digits
-        Ok(Clock::get()?.slot >= self.initial_slots + 1000 && last_digits.chars().nth(0) == last_digits.chars().nth(1)) // Check if 1000 blocks have passed since the start and if the last two digits are equal
+        Ok(Clock::get()?.slot >= self.initial_slots + BETTING_PERIOD_BLOCKS && last_digits.chars().nth(0) == last_digits.chars().nth(1)) // Check if the betting period has ended
     }
 
     pub fn calculate_drawn_number(&self) -> Result<u8> {

@@ -11,7 +11,7 @@ import {
 import { ellipsify } from "../ui/ui-layout";
 import { quickDialogForm } from "../ui/quickDialogForm";
 import { LAMPORTS_PER_SOL } from "@solana/web3.js";
-import { useEffect, useMemo } from "react";
+import { useMemo } from "react";
 import bs58 from "bs58";
 
 export function GotCritterCreate() {
@@ -146,6 +146,12 @@ function GameCard({ game }: { game: ProgramAccount<Game> }) {
             <div>
               <span className="font-bold">Drawn Number:</span>{" "}
               {drawnNumber.data?.toString()}
+            </div>
+            <div>
+              <span className="font-bold">Combined Hash:</span>{" "}
+              <div className="max-w-32">
+                {game.account.combinedHash.toString().replace(/,/g, ", ")}
+              </div>
             </div>
             {!game.account.bettingPeriodEnded && (
               <>
