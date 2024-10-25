@@ -66,6 +66,7 @@ async function main() {
       for (const gameToClose of closeableGames) {
         console.log("Selected game:", gameToClose.publicKey.toBase58());
 
+        // TODO: maybe we could close all closeableGames at once
         const { signature, reward } = await closeGame(
           provider,
           gameToClose.publicKey,
