@@ -2,9 +2,13 @@
 
 ## What is this?
 
-This is an implementation of a betting game similar to the "Jogo do bicho" game. The main idea here is to create a decentralized game that is not controlled by a single party and the whole prize is distributed among the winners.
+This is an implementation of a betting game similar to the "Jogo do bicho" game. The main idea here is to create a decentralized game without administrative control with the whole prize distributed among the winners.
+
+This project was generated with [create-solana-dapp](https://github.com/solana-developers/create-solana-dapp).
 
 ## Setup
+
+Are you **new to Solana?** Install required softwares following the steps on [Solana Documentation](https://solana.com/pt/developers/guides/getstarted/setup-local-development#2-install-rust). And check the [Other Setup Tips](#other-setup-tips) section.
 
 ### 1. Install the dependencies:
 
@@ -35,6 +39,15 @@ On a dedicated terminal, run:
 ```bash
 npm run start-recycler
 ```
+
+## Code Navigation
+
+- `anchor/programs/gotcritter/src/lib.rs`: The contract code, fully commented.
+- `anchor/src/gotcritter-exports.ts`: Methods, variables and types used by the scripts, tests and client.
+- `src/components/gotcritter/gotcritter-data-access.ts`: Methods to interact with the contract used by the client.
+- `src/components/gotcritter/gotcritter-ui.tsx`: The most relevant client UI.
+- `scripts`: The folder with the scripts mentioned above.
+- `anchor/tests/gotcritter.spec.ts`: Tests that cover the whole game logic.
 
 ## How to play
 
@@ -88,3 +101,60 @@ The number is calculated based on the preceding block of each bet plus the Speci
 - Everytime a bet is placed the drawn number would need to be recalculated, making it more difficult to manipulate.
 - A Validator could delay the block so it generates a particular blockhash, but this is a difficult process and there is a good chance for him to get caught and punished.
 - Someone could Spam the network with a priority fee so the transaction that tries to intentionally close the bet could be delayed and cancelled, but again, the bot could do the same, eventually a delayed bet would land on a Special Block, unintentionally closing the game.
+- There are some dependencies on the contract that are marked as deprecated, but I couldn't find a documentation about the new alternatives.
+
+### Private Games
+
+When creating a game the contract accepts a list of participants, when not empty, only those would be able to bet on this game. But this feature is not tested yet.
+
+## Other Setup Tips
+
+<details>
+<summary>Install Node</summary>
+
+- Install NVM:
+  ```
+  curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
+  ```
+- Install latest nodejs:
+  ```
+  nvm install --lts
+  ```
+- Use the nodejs version you just installed:
+  ```
+  nvm use <version>
+  ```
+- And finally, you can install dependencies of the repository:
+  ```
+  npm i
+  ```
+
+</details>
+
+<details>
+<summary>Problem running solana-test-validator</summary>
+
+If you have a problem with `solana-test-validator` try installing bzip2:
+
+```
+sudo apt-get install bzip2
+```
+
+</details>
+
+<details>
+<summary>Using a real Wallet</summary>
+
+- Install Phantom Wallet as your browser Extension, create an account
+- Change Phantom to use local network: Side menu > Config Icon > Developer definitions > Solana > Select "Solana Localnet"
+- Add funds to your Phantom: `solana airdrop 100 <address>`
+- Check Phantom balance: `solana balance <address>`
+</details>
+
+<details>
+<summary>Fix Solana version on the project</summary>
+
+Open src/program-rust/Cargo.toml and change `solana-program`, `solana-program-test` and `solana-sdk` to use the same
+version of your `solana-cli`, which is probably the latest.
+
+</details>
