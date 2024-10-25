@@ -2,8 +2,6 @@
 
 import { ProgramAccount, BN } from "@coral-xyz/anchor";
 import {
-  Bet,
-  Game,
   useBetProgramAccount,
   useGameProgramAccount,
   useGotCritterProgram,
@@ -11,11 +9,15 @@ import {
 import { ellipsify } from "../ui/ui-layout";
 import { quickDialogForm } from "../ui/quickDialogForm";
 import { LAMPORTS_PER_SOL } from "@solana/web3.js";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import bs58 from "bs58";
+import { WalletButton } from "../solana/solana-provider";
+import { useWallet } from "@solana/wallet-adapter-react";
+import { Bet, Game } from "@project/anchor";
 
 export function GotCritterCreate() {
   const { createGame } = useGotCritterProgram();
+  const { publicKey } = useWallet();
 
   const handleCreateGame = async () => {
     const [duration] = await quickDialogForm({
@@ -28,13 +30,17 @@ export function GotCritterCreate() {
 
   return (
     <div className="flex gap-4 justify-center">
-      <button
-        className="btn btn-xs lg:btn-md btn-primary"
-        onClick={handleCreateGame}
-        disabled={createGame.isPending}
-      >
-        Create game {createGame.isPending && "..."}
-      </button>
+      {publicKey ? (
+        <button
+          className="btn btn-xs lg:btn-md btn-primary"
+          onClick={handleCreateGame}
+          disabled={createGame.isPending}
+        >
+          Create game {createGame.isPending && "..."}
+        </button>
+      ) : (
+        <WalletButton className="btn btn-primary" />
+      )}
     </div>
   );
 }
@@ -76,6 +82,7 @@ export function GotCritterProgram() {
 function GameCard({ game }: { game: ProgramAccount<Game> }) {
   const { drawnNumber, placeBet, userBets } = useGameProgramAccount({ game });
   const { currentSlot, currentBlockhash } = useGotCritterProgram();
+  const { publicKey } = useWallet();
 
   // Converte o currentBlockhash para hexadecimal
   const currentBlockhashHex = useMemo(() => {
@@ -107,20 +114,35 @@ function GameCard({ game }: { game: ProgramAccount<Game> }) {
     });
   };
 
+  const [showFullKey, setShowFullKey] = useState(false);
+
+  const toggleKeyDisplay = () => {
+    setShowFullKey(!showFullKey);
+  };
+
   return (
     <div className="card card-bordered border-base-300 border-4 text-neutral-content mb-2">
       <div className="card-body">
-        <h2 className="card-title justify-center text-3xl cursor-pointer">
-          {ellipsify(game.publicKey.toString())}
+        <h2
+          className="card-title justify-center text-3xl cursor-pointer"
+          onClick={toggleKeyDisplay}
+        >
+          {showFullKey
+            ? game.publicKey.toString()
+            : ellipsify(game.publicKey.toString())}
         </h2>
         <div className="card-actions justify-around my-4">
-          <button
-            className="btn btn-xs lg:btn-md btn-outline"
-            onClick={handlePlaceBet}
-            disabled={placeBet.isPending}
-          >
-            Place Bet
-          </button>
+          {publicKey ? (
+            <button
+              className="btn btn-xs lg:btn-md btn-outline"
+              onClick={handlePlaceBet}
+              disabled={placeBet.isPending}
+            >
+              Place Bet
+            </button>
+          ) : (
+            <WalletButton className="btn btn-outline" />
+          )}
         </div>
         <div className="w-[640px] flex flex-1 gap-2">
           <div className="flex flex-col gap-1">
@@ -140,8 +162,7 @@ function GameCard({ game }: { game: ProgramAccount<Game> }) {
             )}
             <div>
               <span className="font-bold">Total Value:</span>{" "}
-              {game.account.totalValue.div(new BN(LAMPORTS_PER_SOL)).toString()}{" "}
-              SOL
+              {game.account.totalValue.toNumber() / LAMPORTS_PER_SOL} SOL
             </div>
             <div>
               <span className="font-bold">Betting Period Ended:</span>{" "}
@@ -176,15 +197,14 @@ function GameCard({ game }: { game: ProgramAccount<Game> }) {
             </div>
             <div>
               <span className="font-bold">Value Provided to Winners:</span>{" "}
-              {game.account.valueProvidedToWinners
-                .div(new BN(LAMPORTS_PER_SOL))
-                .toString()}{" "}
+              {game.account.valueProvidedToWinners.toNumber() /
+                LAMPORTS_PER_SOL}{" "}
               SOL
             </div>
             {game.account.betsPerNumber.map((b, i) => (
               <div key={i}>
                 <span className="font-bold">Bet {i + 1}:</span>{" "}
-                {b.div(new BN(LAMPORTS_PER_SOL)).toString()} SOL
+                {b.toNumber() / LAMPORTS_PER_SOL} SOL
               </div>
             ))}
           </div>
@@ -233,11 +253,11 @@ function BetCard({
       </div>
       <div>
         <span className="font-bold">Value:</span>{" "}
-        {bet.account.value.div(new BN(LAMPORTS_PER_SOL)).toString()} SOL
+        {bet.account.value.toNumber() / LAMPORTS_PER_SOL} SOL
       </div>
       <div>
         <span className="font-bold">Estimated Prize:</span>{" "}
-        {prize.data?.div(new BN(LAMPORTS_PER_SOL)).toString()} SOL
+        {prize.data?.toNumber() / LAMPORTS_PER_SOL} SOL
       </div>
       {prize.data && prize.data > 0 && game.account.bettingPeriodEnded && (
         <>

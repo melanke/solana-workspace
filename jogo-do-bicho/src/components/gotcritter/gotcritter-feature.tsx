@@ -8,14 +8,13 @@ import { useGotCritterProgram } from "./gotcritter-data-access";
 import { GotCritterCreate, GotCritterProgram } from "./gotcritter-ui";
 
 export default function GotCritterFeature() {
-  const { publicKey } = useWallet();
   const { programId } = useGotCritterProgram();
 
-  return publicKey ? (
+  return (
     <div>
       <AppHero
         title="GotCritter"
-        subtitle={'Run the program by clicking the "Run program" button.'}
+        subtitle={"Create a game, place a bet, claim your prize"}
       >
         <p className="mb-6">
           <ExplorerLink
@@ -26,14 +25,6 @@ export default function GotCritterFeature() {
         <GotCritterCreate />
       </AppHero>
       <GotCritterProgram />
-    </div>
-  ) : (
-    <div className="max-w-4xl mx-auto">
-      <div className="hero py-[64px]">
-        <div className="hero-content text-center">
-          <WalletButton className="btn btn-primary" />
-        </div>
-      </div>
     </div>
   );
 }

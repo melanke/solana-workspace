@@ -83,18 +83,17 @@ pub mod gotcritter {
                 game_balance
             };
 
-            // Check if the reward amount to transfer is zero
-            require!(reward_amount > 0, CustomError::InsufficientBalance);
-
-            // Transfer the reward to the closer of the betting period
-            **ctx.accounts.game.to_account_info().try_borrow_mut_lamports()? -= reward_amount;
-            **ctx.accounts.bettor.to_account_info().try_borrow_mut_lamports()? += reward_amount;
+            if reward_amount > 0 {
+                // Transfer the reward to the closer of the betting period
+                **ctx.accounts.game.to_account_info().try_borrow_mut_lamports()? -= reward_amount;
+                **ctx.accounts.bettor.to_account_info().try_borrow_mut_lamports()? += reward_amount;
+            }
 
             // Emit an event informing that the betting period ended
             emit!(EndOfBettingPeriod {
                 game: ctx.accounts.game.key(),
                 closer: ctx.accounts.bettor.key(),
-                reward: ENDING_BET_PERIOD_REWARD,
+                reward: reward_amount,
                 timestamp: Clock::get()?.unix_timestamp,
             });
         } else {
@@ -351,7 +350,7 @@ pub enum CustomError {
     BettingPeriodHasEnded,
     #[msg("The game has not finished yet")]
     GameNotFinished,
-    #[msg("Invalid value. The minimum betting value is 0.001 SOL")]
+    #[msg("Invalid value. The minimum betting value is 0.01 SOL")]
     InvalidValue,
     #[msg("No prize for this bet")]
     NoPrize,

@@ -2,24 +2,23 @@
 import {
   AnchorProvider,
   Program,
-  BN,
   ProgramAccount,
   web3,
   utils,
+  BorshCoder,
+  EventParser,
 } from "@coral-xyz/anchor";
 import {
   Connection,
-  Keypair,
   LAMPORTS_PER_SOL,
   PublicKey,
-  sendAndConfirmTransaction,
-  Signer,
   Transaction,
   TransactionSignature,
 } from "@solana/web3.js";
 import GotcritterIDL from "../target/idl/gotcritter.json";
 import type { Gotcritter } from "../target/types/gotcritter";
 import { bs58 } from "@coral-xyz/anchor/dist/cjs/utils/bytes";
+import BN from "bn.js";
 
 // Re-export the generated IDL and type
 export { Gotcritter, GotcritterIDL };
@@ -53,7 +52,7 @@ export function getGotcritterProgram(provider: AnchorProvider) {
   return new Program(GotcritterIDL as Gotcritter, provider);
 }
 
-export async function findHigherGame(
+export async function findGames(
   connection: Connection,
   program: Program<Gotcritter>,
   options?: {
@@ -62,7 +61,7 @@ export async function findHigherGame(
     minEndingSlotPast?: boolean;
     withBetOnAllNumbers?: boolean;
   }
-): Promise<ProgramAccount<Game>> {
+): Promise<ProgramAccount<Game>[]> {
   const filters: web3.GetProgramAccountsFilter[] = [];
 
   if (options?.onlyPublic === true) {
@@ -92,7 +91,7 @@ export async function findHigherGame(
 
   const games = await program.account.game.all(filters);
 
-  let gameWithHighestValue = null;
+  const filteredGames: ProgramAccount<Game>[] = [];
 
   for (const game of games) {
     if (
@@ -102,19 +101,17 @@ export async function findHigherGame(
       (options?.minEndingSlotPast === undefined ||
         game.account.minEndingSlot.lt(new BN(await connection.getSlot()))) && // filter by minEndingSlotPast
       (options?.withBetOnAllNumbers === undefined ||
-        game.account.betsPerNumber.every((bet) => bet.gt(new BN(0)))) && // filter by checking if all betsPerNumber are greater than 0
-      (!gameWithHighestValue ||
-        game.account.totalValue.gt(gameWithHighestValue.account.totalValue))
+        game.account.betsPerNumber.every((bet) => bet.gt(new BN(0)))) // filter by checking if all betsPerNumber are greater than 0
     ) {
-      gameWithHighestValue = game;
+      filteredGames.push(game);
     }
   }
 
-  if (!gameWithHighestValue) {
-    throw new Error(`No open games found. Total games: ${games.length}`);
-  }
+  filteredGames.sort((a, b) =>
+    a.account.totalValue.gt(b.account.totalValue) ? -1 : 1
+  );
 
-  return gameWithHighestValue;
+  return filteredGames;
 }
 
 export async function closeGame(
@@ -122,10 +119,15 @@ export async function closeGame(
   game: PublicKey,
   betNumber: number = 1,
   verbose: boolean = false
-): Promise<TransactionSignature> {
+): Promise<{ signature: TransactionSignature; reward?: BN }> {
   const connection = provider.connection;
   const program = new Program(GotcritterIDL as Gotcritter, provider);
   const payer = provider.wallet;
+
+  const eventParser = new EventParser(
+    program.programId,
+    new BorshCoder(program.idl)
+  );
 
   while (true) {
     try {
@@ -168,12 +170,21 @@ export async function closeGame(
           maxRetries: 1,
         });
 
+        const tx = await provider.connection.getTransaction(signature, {
+          commitment: "confirmed",
+          maxSupportedTransactionVersion: 0,
+        });
+
+        const events = [...eventParser.parseLogs(tx?.meta?.logMessages ?? [])];
+        const ev = events.find((event) => event.name === "endOfBettingPeriod");
+        const reward = ev?.data.reward;
+
         // TODO: check the notification to see if the game was closed
 
         if (verbose) {
           console.log("Successful transaction:", signature);
         }
-        return signature;
+        return { signature, reward };
       }
     } catch (error) {
       throw new Error("Error observing or sending transaction");

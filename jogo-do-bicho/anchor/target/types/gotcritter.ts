@@ -310,7 +310,7 @@ export type Gotcritter = {
     {
       "code": 6004,
       "name": "invalidValue",
-      "msg": "Invalid value. The minimum betting value is 0.001 SOL"
+      "msg": "Invalid value. The minimum betting value is 0.01 SOL"
     },
     {
       "code": 6005,
