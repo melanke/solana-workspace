@@ -3,6 +3,8 @@
 import {
   GOTCRITTER_PROGRAM_ID as programId,
   getGotcritterProgram,
+  Game,
+  Bet,
 } from "@project/anchor";
 import * as anchor from "@coral-xyz/anchor";
 import { useConnection } from "@solana/wallet-adapter-react";
@@ -12,31 +14,6 @@ import toast from "react-hot-toast";
 import { useCluster } from "../cluster/cluster-data-access";
 import { useAnchorProvider } from "../solana/solana-provider";
 import { useTransactionToast } from "../ui/ui-layout";
-import { PublicKey, SystemProgram } from "@solana/web3.js";
-
-export type Game = {
-  creator: PublicKey;
-  open: boolean;
-  participants: PublicKey[];
-  totalValue: anchor.BN;
-  initialSlots: anchor.BN;
-  lastBlockhash: number[];
-  combinedHash: number[];
-  betsPerNumber: anchor.BN[];
-  bettingPeriodEnded: boolean;
-  drawnNumberCache: number | null;
-  numberOfBets: anchor.BN;
-  valueProvidedToWinners: anchor.BN;
-};
-
-export type Bet = {
-  game: PublicKey;
-  bettor: PublicKey;
-  value: anchor.BN;
-  number: number;
-  blockhash: number[];
-  prizeClaimed: boolean;
-};
 
 export function useGotCritterProgram() {
   const { connection } = useConnection();
@@ -71,10 +48,10 @@ export function useGotCritterProgram() {
 
   const createGame = useMutation({
     mutationKey: ["gotcritter", "greet", { cluster }],
-    mutationFn: () => {
+    mutationFn: (duration: anchor.BN) => {
       const gameKeypair = anchor.web3.Keypair.generate();
       return program.methods
-        .createGame(true, null)
+        .createGame(duration, null)
         .accounts({
           game: gameKeypair.publicKey,
           creator: provider.publicKey,

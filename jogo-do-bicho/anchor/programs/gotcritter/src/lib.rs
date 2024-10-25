@@ -7,34 +7,33 @@ use hex;
 
 declare_id!("GsxEDNRJbGhMADyosnm9R2HW6tL4VS2vrpwVhBZkFQaV");
 
-const BETTING_PERIOD_BLOCKS: u64 = 100; // TODO: instead of using a hardcoded value, the game should have a parameter for the betting period in slots (and maybe we don't need initial_slots, only the ending_slots)
+const ENDING_BET_PERIOD_REWARD: u64 = 10_000_000; // 0.01 SOL em lamports
+const MIN_BET_VALUE: u64 = 10_000_000; // 0.01 SOL em lamports
 
 #[program]
 pub mod gotcritter {
     use super::*;
 
     // Method to create a new game
-    pub fn create_game(ctx: Context<CreateGame>, open: bool, participants: Option<Vec<Pubkey>>) -> Result<()> {
+    pub fn create_game(ctx: Context<CreateGame>, betting_period_slots: u64, participants: Option<Vec<Pubkey>>) -> Result<()> {
         // Initialize the game account with the provided data
         let game = &mut ctx.accounts.game;
         game.creator = *ctx.accounts.creator.key;
-        game.open = open; // if the game is open it means anyone can join, otherwise only the participants can bet
-        game.participants = participants.unwrap_or_default(); // participants are the ones that can bet on the not-open game
+        game.participants = participants.unwrap_or_default(); // participants are the ones that can bet on the private game, if none are provided, the game is public
         game.total_value = 0; // total sum of the values of bets on the game
-        game.initial_slots = Clock::get()?.slot; // the slot when the game was created
-        game.last_blockhash = [0; 32]; // the blockhash of the last bet on the game, used to determine the betting period ending
+        game.min_ending_slot = Clock::get()?.slot + betting_period_slots; // the minimum slot for the betting period to end
         game.combined_hash = [0; 32]; // the combined hash of each blockhash of the bets on the game, used to calculate the drawn number
         game.bets_per_number = [0; 25]; // the count of bets on each number
         game.betting_period_ended = false; // if the betting period has ended, meaning no more bets can be placed and the prizes can be claimed
-        game.drawn_number_cache = None; // the drawn number cache, used to avoid recalculating the drawn number
-        game.number_of_bets = 0; // the number of bets on the game
+        game.drawn_number_confirmed = None; // the drawn number when the betting period ends, used to avoid recalculating the drawn number
+        game.number_of_bets = 0; // the number of bets on the game, used to generate the bet id
         game.value_provided_to_winners = 0; // the sum of the values of the prizes claimed and paid to the winners
 
         // Emit an event informing that a new game was created
         emit!(GameCreated {
-            game: ctx.accounts.game.key(),
+            game: game.key(),
             creator: ctx.accounts.creator.key(),
-            open,
+            private: !game.participants.is_empty(),
             timestamp: Clock::get()?.unix_timestamp,
         });
 
@@ -44,76 +43,111 @@ pub mod gotcritter {
     // Method to place a bet
     pub fn place_bet(ctx: Context<PlaceBet>, number: u8, value: u64) -> Result<()> {
         // Check if the betting period is still open
-        require!(!ctx.accounts.game.betting_period_ended, CustomError::BettingPeriodEnded);
+        require!(!ctx.accounts.game.betting_period_ended, CustomError::BettingPeriodHasEnded);
 
         // Get the most recent blockhash
         let recent_blockhashes = RecentBlockhashes::from_account_info(&ctx.accounts.recent_blockhashes)?;
         let recent_blockhash = recent_blockhashes.get(0).ok_or(ProgramError::InvalidAccountData)?.blockhash;
 
-        // if the blockhash changed
-        if recent_blockhash != Hash::new_from_array(ctx.accounts.game.last_blockhash) {
-            // theoretically, the if is unnecessary, it will be always true, since there will be only one bet per game per blockhash
-            // (game is a mutable pda and only one transaction handling it can happen per block)
+        // Reminder: there will be only one bet per game per blockhash
+        // (game is a mutable pda and only one transaction handling it can happen per block)
 
-            // Update the combined hash adding the recent blockhash
-            let mut combined = ctx.accounts.game.combined_hash.to_vec();
-            combined.extend_from_slice(&recent_blockhash.to_bytes());
-            ctx.accounts.game.combined_hash = hash(&combined).to_bytes();
+        // Update the combined hash adding the recent blockhash
+        let mut combined = ctx.accounts.game.combined_hash.to_vec();
+        combined.extend_from_slice(&recent_blockhash.to_bytes());
+        ctx.accounts.game.combined_hash = hash(&combined).to_bytes();
+        
+        // if we are at the minimum ending slot or beyond
+        if Clock::get()?.slot >= ctx.accounts.game.min_ending_slot {            
+            // Check if there is at least one bet for each number
+            let all_bets_filled = ctx.accounts.game.bets_per_number.iter().all(|&bet| bet > 0);
 
-            ctx.accounts.game.last_blockhash = recent_blockhash.to_bytes(); // Update the last blockhash // TODO: maybe this variable is not necessary, since we have the recent_blockhash
-            ctx.accounts.game.betting_period_ended = ctx.accounts.game.calc_betting_period_ended()?; // Check if the betting period has ended and update the game account with this information
-
-            // TODO: ⚠️ recent_blockhash is something known by the user before placing the bet,
-            // so the bettor could use it to calculate the drawn number precisely the moment the betting period ends by his bet.
-            // When the betting period ends we should accept his transaction to save the betting_period_ended,
-            // but we should ignore his bet and pay him back a retribution for his service of closing the betting period
+            if all_bets_filled {
+                // Check if the betting period should end (the last 2 digits of the blockhash must be the same)
+                let recent_blockhash_hex = hex::encode(recent_blockhash.to_bytes());
+                let last_digits = &recent_blockhash_hex[recent_blockhash_hex.len()-2..];
+                ctx.accounts.game.betting_period_ended = last_digits.chars().nth(0) == last_digits.chars().nth(1);
+            }
         }
 
-        // Check if the game is open or if the bettor is in the participants list
-        require!(ctx.accounts.game.open || ctx.accounts.game.participants.contains(ctx.accounts.bettor.key), CustomError::GameClosed);
-        
-        // Check if the bet number is valid
-        require!(number >= 1 && number <= 25, CustomError::InvalidNumber);
-        
-        // Check if the bet value is valid (minimum of 0.01 SOL)
-        require!(value >= 1_000_000, CustomError::InvalidValue);
+        // If the betting period ended
+        if ctx.accounts.game.betting_period_ended {
+            // Confirm the drawn number
+            ctx.accounts.game.drawn_number_confirmed = Some(ctx.accounts.game.calculate_drawn_number()?);
 
-        // Transfer the bet value from the bettor to the game account
-        let transfer_instruction = system_instruction::transfer(
-            ctx.accounts.bettor.key,
-            ctx.accounts.game.to_account_info().key,
-            value,
-        );
-        invoke(
-            &transfer_instruction,
-            &[
-                ctx.accounts.bettor.to_account_info(),
-                ctx.accounts.game.to_account_info(),
-                ctx.accounts.system_program.to_account_info(),
-            ],
-        )?;
-        
-        ctx.accounts.game.bets_per_number[(number - 1) as usize] += value; // Update the sum of bets for the chosen number
-        ctx.accounts.game.total_value += value; // Update the total value of bets on the game
-        ctx.accounts.game.number_of_bets += 1; // Update the number of bets on the game
+            // Check if the game has enough balance to pay the ending bet period reward
+            let game_balance = ctx.accounts.game.to_account_info().lamports();
+            let reward_amount = if game_balance >= ENDING_BET_PERIOD_REWARD {
+                ENDING_BET_PERIOD_REWARD
+            } else {
+                game_balance
+            };
 
-        // Create the bet account
-        let bet = &mut ctx.accounts.bet;
-        bet.game = ctx.accounts.game.key(); // The game the bet belongs to
-        bet.bettor = *ctx.accounts.bettor.key; // The bettor
-        bet.value = value; // The value of the bet
-        bet.number = number; // The number of the bet
-        bet.blockhash = recent_blockhash.to_bytes(); // The blockhash of the bet // TODO: check if this is necessary
+            // Check if the reward amount to transfer is zero
+            require!(reward_amount > 0, CustomError::InsufficientBalance);
 
-        // Emit an event informing that a bet was placed
-        emit!(BetPlaced {
-            game: ctx.accounts.game.key(),
-            bettor: ctx.accounts.bettor.key(),
-            number,
-            value,
-            timestamp: Clock::get()?.unix_timestamp,
-            bet: bet.key(),
-        });
+            // Transfer the reward to the closer of the betting period
+            **ctx.accounts.game.to_account_info().try_borrow_mut_lamports()? -= reward_amount;
+            **ctx.accounts.bettor.to_account_info().try_borrow_mut_lamports()? += reward_amount;
+
+            // Emit an event informing that the betting period ended
+            emit!(EndOfBettingPeriod {
+                game: ctx.accounts.game.key(),
+                closer: ctx.accounts.bettor.key(),
+                reward: ENDING_BET_PERIOD_REWARD,
+                timestamp: Clock::get()?.unix_timestamp,
+            });
+        } else {
+            // if the betting period is not ended
+
+            // Check if the game is open or if the bettor is in the participants list
+            require!(
+                ctx.accounts.game.participants.is_empty() || ctx.accounts.game.participants.contains(ctx.accounts.bettor.key),
+                CustomError::GameClosed
+            );
+            
+            // Check if the bet number is valid
+            require!(number >= 1 && number <= 25, CustomError::InvalidNumber);
+            
+            // Check if the bet value is valid (minimum of 0.01 SOL)
+            require!(value >= MIN_BET_VALUE, CustomError::InvalidValue);
+
+            // Transfer the bet value from the bettor to the game account
+            let transfer_instruction = system_instruction::transfer(
+                ctx.accounts.bettor.key,
+                ctx.accounts.game.to_account_info().key,
+                value,
+            );
+            invoke(
+                &transfer_instruction,
+                &[
+                    ctx.accounts.bettor.to_account_info(),
+                    ctx.accounts.game.to_account_info(),
+                    ctx.accounts.system_program.to_account_info(),
+                ],
+            )?;
+            
+            ctx.accounts.game.bets_per_number[(number - 1) as usize] += value; // Update the sum of bets for the chosen number
+            ctx.accounts.game.total_value += value; // Update the total value of bets on the game
+            ctx.accounts.game.number_of_bets += 1; // Update the number of bets on the game
+
+            // Create the bet account
+            let bet = &mut ctx.accounts.bet;
+            bet.game = ctx.accounts.game.key(); // The game the bet belongs to
+            bet.bettor = *ctx.accounts.bettor.key; // The bettor
+            bet.value = value; // The value of the bet
+            bet.number = number; // The number of the bet
+
+            // Emit an event informing that a bet was placed
+            emit!(BetPlaced {
+                game: ctx.accounts.game.key(),
+                bettor: ctx.accounts.bettor.key(),
+                number,
+                value,
+                timestamp: Clock::get()?.unix_timestamp,
+                bet: bet.key(),
+            });
+        }
 
         Ok(())
     }
@@ -161,11 +195,18 @@ pub mod gotcritter {
 
         // Check if the game has enough balance to pay the prize, but theoretically the error should never happen
         let game_balance = game.to_account_info().lamports();
-        require!(game_balance >= prize, CustomError::InsufficientBalance);
+        let prize_to_transfer = if game_balance >= prize {
+            prize
+        } else {
+            game_balance
+        };
+
+        // Check if the prize to transfer is zero
+        require!(prize_to_transfer > 0, CustomError::InsufficientBalance);
 
         // Transfer the prize to the bettor
-        **game.to_account_info().try_borrow_mut_lamports()? -= prize;
-        **ctx.accounts.bettor.to_account_info().try_borrow_mut_lamports()? += prize;
+        **game.to_account_info().try_borrow_mut_lamports()? -= prize_to_transfer;
+        **ctx.accounts.bettor.to_account_info().try_borrow_mut_lamports()? += prize_to_transfer;
 
         // Update the total value provided to winners
         game.value_provided_to_winners += prize;
@@ -189,7 +230,17 @@ pub struct CreateGame<'info> {
     #[account(
         init,
         payer = creator,
-        space = 8 + 32 + 1 + 32 * 10 + 8 + 8 + 32 + 32 + 200 + 1 + 1 + 8 + 8
+        space = 8 + // discriminator
+                32 + // creator: Pubkey
+                4 + (32 * 10) + // participants: Vec<Pubkey> (assumindo um máximo de 10 participantes)
+                8 + // total_value: u64
+                8 + // min_ending_slot: u64
+                32 + // combined_hash: [u8; 32]
+                (8 * 25) + // bets_per_number: [u64; 25]
+                1 + // betting_period_ended: bool
+                1 + 1 + // drawn_number_confirmed: Option<u8>
+                8 + // number_of_bets: u64
+                8 // value_provided_to_winners: u64
     )]
     pub game: Account<'info, Game>,
     #[account(mut)]
@@ -209,7 +260,12 @@ pub struct PlaceBet<'info> {
     #[account(
         init,
         payer = bettor,
-        space = 8 + 32 + 8 + 1 + 32 + 32 + 1,
+        space = 8 + // discriminator
+                32 + // game: Pubkey
+                32 + // bettor: Pubkey
+                8 + // value: u64
+                1 + // number: u8
+                1, // prize_claimed: bool
         seeds = [
             b"bet",
             game.key().as_ref(),
@@ -264,15 +320,13 @@ pub struct ClaimPrize<'info> {
 #[account]
 pub struct Game {
     pub creator: Pubkey,
-    pub open: bool,
     pub participants: Vec<Pubkey>,
     pub total_value: u64,
-    pub initial_slots: u64,
-    pub last_blockhash: [u8; 32],
+    pub min_ending_slot: u64,
     pub combined_hash: [u8; 32],
     pub bets_per_number: [u64; 25],
     pub betting_period_ended: bool,
-    pub drawn_number_cache: Option<u8>, // TODO: we could rename this to something like drawn_number_confirmed
+    pub drawn_number_confirmed: Option<u8>,
     pub number_of_bets: u64,
     pub value_provided_to_winners: u64,
 }
@@ -284,7 +338,6 @@ pub struct Bet {
     pub bettor: Pubkey,
     pub value: u64,
     pub number: u8,
-    pub blockhash: [u8; 32],
     pub prize_claimed: bool,
 }
 
@@ -295,11 +348,9 @@ pub enum CustomError {
     #[msg("Invalid number. Must be between 1 and 25")]
     InvalidNumber,
     #[msg("The betting period has ended")]
-    BettingPeriodEnded,
+    BettingPeriodHasEnded,
     #[msg("The game has not finished yet")]
     GameNotFinished,
-    #[msg("The game can't be closed yet, waiting for the prizes to be claimed")]
-    CantCloseGame, // TODO: this is not used anymore and there is no way to close the game
     #[msg("Invalid value. The minimum betting value is 0.001 SOL")]
     InvalidValue,
     #[msg("No prize for this bet")]
@@ -320,7 +371,7 @@ pub enum CustomError {
 pub struct GameCreated {
     pub game: Pubkey,
     pub creator: Pubkey,
-    pub open: bool,
+    pub private: bool,
     pub timestamp: i64,
 }
 
@@ -344,24 +395,17 @@ pub struct PrizeClaimed {
 }
 
 #[event]
-pub struct GameEnded {
+pub struct EndOfBettingPeriod {
     pub game: Pubkey,
-    pub creator: Pubkey,
-    pub total_value: u64,
+    pub closer: Pubkey,
+    pub reward: u64,
     pub timestamp: i64,
 }
 
 impl Game {
-    // TODO: maybe we don't need this method, we could use this code directly in the place_bet method
-    pub fn calc_betting_period_ended(&self) -> Result<bool> {
-        let last_blockhash_str = hex::encode(self.last_blockhash); // Convert the last blockhash to hexadecimal string
-        let last_digits = &last_blockhash_str[last_blockhash_str.len()-2..]; // Get the last two digits
-        Ok(Clock::get()?.slot >= self.initial_slots + BETTING_PERIOD_BLOCKS && last_digits.chars().nth(0) == last_digits.chars().nth(1)) // Check if the betting period has ended
-    }
-
     pub fn calculate_drawn_number(&self) -> Result<u8> {
-        let drawn_number = if let Some(cache) = self.drawn_number_cache {
-            cache // uses the cached drawn number if it exists
+        let drawn_number = if let Some(confirmed) = self.drawn_number_confirmed {
+            confirmed // uses the confirmed drawn number if it exists
         } else {
             // Calculate the drawn number using the combined hash
             let mut sum: u64 = 0;
@@ -379,9 +423,12 @@ impl Game {
 
         let prize = if total_bet_on_number <= 0 || bet.number != drawn_number {
             0 // no prize if there is no bet on the drawn number or the bet is not on the drawn number
-        } else {            
+        } else {
+            // Deduct the ENDING_BET_PERIOD_REWARD from the total_value before calculating the prize
+            let adjusted_total_value = self.total_value.saturating_sub(ENDING_BET_PERIOD_REWARD);
+            
             // Use u128 for intermediate calculation to avoid overflow
-            let intermediate_result = (self.total_value as u128) * (bet.value as u128) / (total_bet_on_number as u128);
+            let intermediate_result = (adjusted_total_value as u128) * (bet.value as u128) / (total_bet_on_number as u128);
             
             // Convert back to u64, capping at u64::MAX if necessary
             intermediate_result.min(u64::MAX as u128) as u64 // this is safe because the max value of u64 in lamports is way more than sol's total supply

@@ -76,8 +76,8 @@ export type Gotcritter = {
       ],
       "args": [
         {
-          "name": "open",
-          "type": "bool"
+          "name": "bettingPeriodSlots",
+          "type": "u64"
         },
         {
           "name": "participants",
@@ -247,6 +247,19 @@ export type Gotcritter = {
       ]
     },
     {
+      "name": "endOfBettingPeriod",
+      "discriminator": [
+        190,
+        50,
+        129,
+        243,
+        123,
+        152,
+        72,
+        14
+      ]
+    },
+    {
       "name": "gameCreated",
       "discriminator": [
         218,
@@ -257,19 +270,6 @@ export type Gotcritter = {
         112,
         96,
         2
-      ]
-    },
-    {
-      "name": "gameEnded",
-      "discriminator": [
-        35,
-        93,
-        113,
-        153,
-        29,
-        144,
-        200,
-        109
       ]
     },
     {
@@ -299,7 +299,7 @@ export type Gotcritter = {
     },
     {
       "code": 6002,
-      "name": "bettingPeriodEnded",
+      "name": "bettingPeriodHasEnded",
       "msg": "The betting period has ended"
     },
     {
@@ -309,41 +309,36 @@ export type Gotcritter = {
     },
     {
       "code": 6004,
-      "name": "cantCloseGame",
-      "msg": "The game can't be closed yet, waiting for the prizes to be claimed"
-    },
-    {
-      "code": 6005,
       "name": "invalidValue",
       "msg": "Invalid value. The minimum betting value is 0.001 SOL"
     },
     {
-      "code": 6006,
+      "code": 6005,
       "name": "noPrize",
       "msg": "No prize for this bet"
     },
     {
-      "code": 6007,
+      "code": 6006,
       "name": "betDoesNotBelongToBettor",
       "msg": "The bet does not belong to the bettor"
     },
     {
-      "code": 6008,
+      "code": 6007,
       "name": "prizeAlreadyClaimed",
       "msg": "The prize for this bet has already been claimed"
     },
     {
-      "code": 6009,
+      "code": 6008,
       "name": "insufficientBalance",
       "msg": "Sorry, something strange happened and we don't have enough balance to pay the prize"
     },
     {
-      "code": 6010,
+      "code": 6009,
       "name": "invalidCreator",
       "msg": "Invalid creator"
     },
     {
-      "code": 6011,
+      "code": 6010,
       "name": "betDoesNotBelongToGame",
       "msg": "A aposta não pertence a este jogo"
     }
@@ -369,15 +364,6 @@ export type Gotcritter = {
           {
             "name": "number",
             "type": "u8"
-          },
-          {
-            "name": "blockhash",
-            "type": {
-              "array": [
-                "u8",
-                32
-              ]
-            }
           },
           {
             "name": "prizeClaimed",
@@ -419,6 +405,30 @@ export type Gotcritter = {
       }
     },
     {
+      "name": "endOfBettingPeriod",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "game",
+            "type": "pubkey"
+          },
+          {
+            "name": "closer",
+            "type": "pubkey"
+          },
+          {
+            "name": "reward",
+            "type": "u64"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
       "name": "game",
       "type": {
         "kind": "struct",
@@ -426,10 +436,6 @@ export type Gotcritter = {
           {
             "name": "creator",
             "type": "pubkey"
-          },
-          {
-            "name": "open",
-            "type": "bool"
           },
           {
             "name": "participants",
@@ -442,17 +448,8 @@ export type Gotcritter = {
             "type": "u64"
           },
           {
-            "name": "initialSlots",
+            "name": "minEndingSlot",
             "type": "u64"
-          },
-          {
-            "name": "lastBlockhash",
-            "type": {
-              "array": [
-                "u8",
-                32
-              ]
-            }
           },
           {
             "name": "combinedHash",
@@ -477,7 +474,7 @@ export type Gotcritter = {
             "type": "bool"
           },
           {
-            "name": "drawnNumberCache",
+            "name": "drawnNumberConfirmed",
             "type": {
               "option": "u8"
             }
@@ -507,32 +504,8 @@ export type Gotcritter = {
             "type": "pubkey"
           },
           {
-            "name": "open",
+            "name": "private",
             "type": "bool"
-          },
-          {
-            "name": "timestamp",
-            "type": "i64"
-          }
-        ]
-      }
-    },
-    {
-      "name": "gameEnded",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "game",
-            "type": "pubkey"
-          },
-          {
-            "name": "creator",
-            "type": "pubkey"
-          },
-          {
-            "name": "totalValue",
-            "type": "u64"
           },
           {
             "name": "timestamp",

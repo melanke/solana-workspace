@@ -17,11 +17,20 @@ import bs58 from "bs58";
 export function GotCritterCreate() {
   const { createGame } = useGotCritterProgram();
 
+  const handleCreateGame = async () => {
+    const [duration] = await quickDialogForm({
+      title: "Create Game",
+      inputs: [{ label: "Duration", type: "number" }],
+    });
+
+    await createGame.mutateAsync(new BN(duration));
+  };
+
   return (
     <div className="flex gap-4 justify-center">
       <button
         className="btn btn-xs lg:btn-md btn-primary"
-        onClick={() => createGame.mutateAsync()}
+        onClick={handleCreateGame}
         disabled={createGame.isPending}
       >
         Create game {createGame.isPending && "..."}
@@ -67,11 +76,6 @@ export function GotCritterProgram() {
 function GameCard({ game }: { game: ProgramAccount<Game> }) {
   const { drawnNumber, placeBet, userBets } = useGameProgramAccount({ game });
   const { currentSlot, currentBlockhash } = useGotCritterProgram();
-
-  // Converte o lastBlockhash para hexadecimal
-  const lastBlockhashHex = useMemo(() => {
-    return Buffer.from(game.account.lastBlockhash).toString("hex");
-  }, [game.account.lastBlockhash]);
 
   // Converte o currentBlockhash para hexadecimal
   const currentBlockhashHex = useMemo(() => {
@@ -125,10 +129,10 @@ function GameCard({ game }: { game: ProgramAccount<Game> }) {
               {ellipsify(game.account.creator.toString())}
             </div>
             <div>
-              <span className="font-bold">Open:</span>{" "}
-              {game.account.open ? "Yes" : "No"}
+              <span className="font-bold">Private:</span>{" "}
+              {game.account.participants.length > 0 ? "Yes" : "No"}
             </div>
-            {!game.account.open && (
+            {game.account.participants.length > 0 && (
               <div>
                 <span className="font-bold">Participants:</span>{" "}
                 {game.account.participants.map((p) => ellipsify(p.toString()))}
@@ -158,7 +162,7 @@ function GameCard({ game }: { game: ProgramAccount<Game> }) {
                 <div>
                   <span className="font-bold">Progress:</span>{" "}
                   {currentSlot.data?.toString()} /{" "}
-                  {game.account.initialSlots.add(new BN(1000)).toString()}
+                  {game.account.minEndingSlot.toString()}
                 </div>
                 <div>
                   <span className="font-bold">Current Blockhash (last 2):</span>{" "}
@@ -166,10 +170,6 @@ function GameCard({ game }: { game: ProgramAccount<Game> }) {
                 </div>
               </>
             )}
-            <div>
-              <span className="font-bold">Last Blockhash (last 2):</span>{" "}
-              {getLastTwoDigits(lastBlockhashHex)}
-            </div>
             <div>
               <span className="font-bold">Number of Bets:</span>{" "}
               {game.account.numberOfBets.toString()}

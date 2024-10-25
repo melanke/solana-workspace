@@ -70,8 +70,8 @@
       ],
       "args": [
         {
-          "name": "open",
-          "type": "bool"
+          "name": "betting_period_slots",
+          "type": "u64"
         },
         {
           "name": "participants",
@@ -241,6 +241,19 @@
       ]
     },
     {
+      "name": "EndOfBettingPeriod",
+      "discriminator": [
+        190,
+        50,
+        129,
+        243,
+        123,
+        152,
+        72,
+        14
+      ]
+    },
+    {
       "name": "GameCreated",
       "discriminator": [
         218,
@@ -251,19 +264,6 @@
         112,
         96,
         2
-      ]
-    },
-    {
-      "name": "GameEnded",
-      "discriminator": [
-        35,
-        93,
-        113,
-        153,
-        29,
-        144,
-        200,
-        109
       ]
     },
     {
@@ -293,7 +293,7 @@
     },
     {
       "code": 6002,
-      "name": "BettingPeriodEnded",
+      "name": "BettingPeriodHasEnded",
       "msg": "The betting period has ended"
     },
     {
@@ -303,41 +303,36 @@
     },
     {
       "code": 6004,
-      "name": "CantCloseGame",
-      "msg": "The game can't be closed yet, waiting for the prizes to be claimed"
-    },
-    {
-      "code": 6005,
       "name": "InvalidValue",
       "msg": "Invalid value. The minimum betting value is 0.001 SOL"
     },
     {
-      "code": 6006,
+      "code": 6005,
       "name": "NoPrize",
       "msg": "No prize for this bet"
     },
     {
-      "code": 6007,
+      "code": 6006,
       "name": "BetDoesNotBelongToBettor",
       "msg": "The bet does not belong to the bettor"
     },
     {
-      "code": 6008,
+      "code": 6007,
       "name": "PrizeAlreadyClaimed",
       "msg": "The prize for this bet has already been claimed"
     },
     {
-      "code": 6009,
+      "code": 6008,
       "name": "InsufficientBalance",
       "msg": "Sorry, something strange happened and we don't have enough balance to pay the prize"
     },
     {
-      "code": 6010,
+      "code": 6009,
       "name": "InvalidCreator",
       "msg": "Invalid creator"
     },
     {
-      "code": 6011,
+      "code": 6010,
       "name": "BetDoesNotBelongToGame",
       "msg": "A aposta não pertence a este jogo"
     }
@@ -363,15 +358,6 @@
           {
             "name": "number",
             "type": "u8"
-          },
-          {
-            "name": "blockhash",
-            "type": {
-              "array": [
-                "u8",
-                32
-              ]
-            }
           },
           {
             "name": "prize_claimed",
@@ -413,6 +399,30 @@
       }
     },
     {
+      "name": "EndOfBettingPeriod",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "game",
+            "type": "pubkey"
+          },
+          {
+            "name": "closer",
+            "type": "pubkey"
+          },
+          {
+            "name": "reward",
+            "type": "u64"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
       "name": "Game",
       "type": {
         "kind": "struct",
@@ -420,10 +430,6 @@
           {
             "name": "creator",
             "type": "pubkey"
-          },
-          {
-            "name": "open",
-            "type": "bool"
           },
           {
             "name": "participants",
@@ -436,17 +442,8 @@
             "type": "u64"
           },
           {
-            "name": "initial_slots",
+            "name": "min_ending_slot",
             "type": "u64"
-          },
-          {
-            "name": "last_blockhash",
-            "type": {
-              "array": [
-                "u8",
-                32
-              ]
-            }
           },
           {
             "name": "combined_hash",
@@ -471,7 +468,7 @@
             "type": "bool"
           },
           {
-            "name": "drawn_number_cache",
+            "name": "drawn_number_confirmed",
             "type": {
               "option": "u8"
             }
@@ -501,32 +498,8 @@
             "type": "pubkey"
           },
           {
-            "name": "open",
+            "name": "private",
             "type": "bool"
-          },
-          {
-            "name": "timestamp",
-            "type": "i64"
-          }
-        ]
-      }
-    },
-    {
-      "name": "GameEnded",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "game",
-            "type": "pubkey"
-          },
-          {
-            "name": "creator",
-            "type": "pubkey"
-          },
-          {
-            "name": "total_value",
-            "type": "u64"
           },
           {
             "name": "timestamp",

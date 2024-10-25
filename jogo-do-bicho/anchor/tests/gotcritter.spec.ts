@@ -1,25 +1,35 @@
-import * as anchor from "@coral-xyz/anchor";
-import { Program } from "@coral-xyz/anchor";
+import {
+  AnchorProvider,
+  BN,
+  BorshCoder,
+  EventParser,
+  getProvider,
+  Program,
+  setProvider,
+  web3,
+  workspace,
+} from "@coral-xyz/anchor";
 import { Gotcritter } from "../target/types/gotcritter";
 import { jest, expect, describe, it } from "@jest/globals";
 import { LAMPORTS_PER_SOL } from "@solana/web3.js";
+import { closeGame } from "@project/anchor";
 
 jest.setTimeout(70 * 1000);
 
 describe("gotcritter", () => {
-  anchor.setProvider(anchor.AnchorProvider.env());
+  setProvider(AnchorProvider.env());
 
-  const program = anchor.workspace.Gotcritter as Program<Gotcritter>;
-  const provider = anchor.getProvider();
+  const program = workspace.Gotcritter as Program<Gotcritter>;
+  const provider = getProvider();
 
   it(
     "Deve permitir fazer uma aposta",
     async () => {
-      const gameKeypair = anchor.web3.Keypair.generate();
+      const gameKeypair = web3.Keypair.generate();
 
       // Criar o jogo
       await program.methods
-        .createGame(true, null)
+        .createGame(new BN(1), null)
         .accounts({
           game: gameKeypair.publicKey,
           creator: provider.publicKey,
@@ -32,7 +42,7 @@ describe("gotcritter", () => {
       // Financiar a conta do apostador
       const airDropSignature = await provider.connection.requestAirdrop(
         bettor.publicKey!,
-        2000 * anchor.web3.LAMPORTS_PER_SOL
+        2000 * web3.LAMPORTS_PER_SOL
       );
 
       // Aguardar a confirmação do airdrop
@@ -42,11 +52,11 @@ describe("gotcritter", () => {
         "confirmed"
       );
 
-      const bets: anchor.web3.PublicKey[] = [];
+      const bets: web3.PublicKey[] = [];
       for (let i = 0; i < 25; i++) {
         // Fazer a aposta
         const betNumber = i + 1;
-        const betValue = new anchor.BN(LAMPORTS_PER_SOL); // 1 SOL
+        const betValue = new BN(LAMPORTS_PER_SOL); // 1 SOL
 
         const betSignature = await program.methods
           .placeBet(betNumber, betValue)
@@ -70,9 +80,9 @@ describe("gotcritter", () => {
         );
         expect(betTransaction).toBeDefined();
 
-        const eventParser = new anchor.EventParser(
+        const eventParser = new EventParser(
           program.programId,
-          new anchor.BorshCoder(program.idl)
+          new BorshCoder(program.idl)
         );
 
         const events = [
@@ -91,9 +101,16 @@ describe("gotcritter", () => {
           betValue.toNumber()
         );
         expect(gameAccount.totalValue.toNumber()).toBe(
-          betValue.mul(new anchor.BN(i + 1)).toNumber()
+          betValue.mul(new BN(i + 1)).toNumber()
         );
       }
+
+      await closeGame(
+        provider as AnchorProvider,
+        gameKeypair.publicKey,
+        1,
+        true
+      );
 
       const drawnNumber = await program.methods
         .drawnNumber()
@@ -113,13 +130,11 @@ describe("gotcritter", () => {
           bet: winningBet,
         })
         .view();
-      expect(Number(prize)).toBe(25 * LAMPORTS_PER_SOL);
+      expect(Number(prize)).toBe((25 - 0.01) * LAMPORTS_PER_SOL); // 0.01 SOL is the reward for the closer
 
       const bettorBalanceBeforeClaim = (
         await provider.connection.getAccountInfo(bettor.publicKey!)
       )?.lamports;
-
-      // THE FOLLOWING TESTS WILL FAIL IF THE GAME IS NOT FINISHED, SO YOU SHOULD COMMENT THE VALIDATION ON THE CONTRACT
 
       await program.methods
         .claimPrize()
@@ -134,8 +149,8 @@ describe("gotcritter", () => {
         gameKeypair.publicKey
       );
       expect(updatedGameAccount.valueProvidedToWinners.toNumber()).toBe(
-        25 * LAMPORTS_PER_SOL
-      );
+        (25 - 0.01) * LAMPORTS_PER_SOL
+      ); // 0.01 SOL is the reward for the closer
 
       const bettorBalanceAfterClaim = (
         await provider.connection.getAccountInfo(bettor.publicKey!)
@@ -145,6 +160,6 @@ describe("gotcritter", () => {
         (bettorBalanceBeforeClaim ?? 0) + 24 * LAMPORTS_PER_SOL
       );
     },
-    15 * 1000
+    70 * 1000
   );
 });
