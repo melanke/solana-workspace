@@ -84,7 +84,7 @@ function GameCard({ game }: { game: ProgramAccount<Game> }) {
   const { currentSlot, currentBlockhash } = useGotCritterProgram();
   const { publicKey } = useWallet();
 
-  // Converte o currentBlockhash para hexadecimal
+  // Converts currentBlockhash to hexadecimal
   const currentBlockhashHex = useMemo(() => {
     if (currentBlockhash.data?.blockhash) {
       return Buffer.from(bs58.decode(currentBlockhash.data.blockhash)).toString(
@@ -94,7 +94,7 @@ function GameCard({ game }: { game: ProgramAccount<Game> }) {
     return "";
   }, [currentBlockhash.data?.blockhash]);
 
-  // Função para obter os últimos dois dígitos
+  // Function to get the last two digits of the hexadecimal string
   const getLastTwoDigits = (hashHex: string) => {
     return hashHex.slice(-2);
   };

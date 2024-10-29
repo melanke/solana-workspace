@@ -103,7 +103,7 @@ export function useGameProgramAccount({
       program.account.bet.all([
         {
           memcmp: {
-            offset: 8, // Pula o discriminador
+            offset: 8, // discriminador
             bytes: game.publicKey.toBase58(),
           },
         },

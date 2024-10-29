@@ -27,7 +27,7 @@ describe("gotcritter", () => {
     async () => {
       const gameKeypair = web3.Keypair.generate();
 
-      // Criar o jogo
+      // Create the game
       await program.methods
         .createGame(new BN(1), null)
         .accounts({
@@ -39,13 +39,13 @@ describe("gotcritter", () => {
 
       const bettor = provider;
 
-      // Financiar a conta do apostador
+      // Fund the bettor account
       const airDropSignature = await provider.connection.requestAirdrop(
         bettor.publicKey!,
         2000 * web3.LAMPORTS_PER_SOL
       );
 
-      // Aguardar a confirmação do airdrop
+      // Wait for the airdrop confirmation
       let latestBlockhash = await provider.connection.getLatestBlockhash();
       await provider.connection.confirmTransaction(
         { signature: airDropSignature, ...latestBlockhash },
@@ -54,7 +54,7 @@ describe("gotcritter", () => {
 
       const bets: web3.PublicKey[] = [];
       for (let i = 0; i < 25; i++) {
-        // Fazer a aposta
+        // Make the bet
         const betNumber = i + 1;
         const betValue = new BN(LAMPORTS_PER_SOL); // 1 SOL
 

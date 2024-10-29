@@ -1,4 +1,3 @@
-// Here we export some useful types and functions for interacting with the Anchor program.
 import {
   AnchorProvider,
   Program,
@@ -178,8 +177,6 @@ export async function closeGame(
         const events = [...eventParser.parseLogs(tx?.meta?.logMessages ?? [])];
         const ev = events.find((event) => event.name === "endOfBettingPeriod");
         const reward = ev?.data.reward;
-
-        // TODO: check the notification to see if the game was closed
 
         if (verbose) {
           console.log("Successful transaction:", signature);

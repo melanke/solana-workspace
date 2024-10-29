@@ -18,10 +18,11 @@ import BN from "bn.js";
  * to run:
  * npx esrun scripts/game-recycler.ts
  */
-
+// FOR PRODUCTION
 // // around 12 HOURS in milliseconds / 400ms (400ms is the amount of time it takes to process a block)
 // const DEFAULT_GAME_DURATION = Math.floor((12 * 60 * 60 * 1000) / 400);
-// OR
+
+// OR FOR TESTING
 // around 5 minutes in milliseconds / 400ms (400ms is the amount of time it takes to process a block)
 const DEFAULT_GAME_DURATION = Math.floor((5 * 60 * 1000) / 400);
 
