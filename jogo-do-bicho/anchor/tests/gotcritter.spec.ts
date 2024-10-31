@@ -16,6 +16,8 @@ import { closeGame } from "@project/anchor";
 
 jest.setTimeout(70 * 1000);
 
+// PS.: I am not using anchor-bankrun because it doesn't have functions to get events from the program
+
 describe("gotcritter", () => {
   setProvider(AnchorProvider.env());
 
@@ -31,7 +33,7 @@ describe("gotcritter", () => {
       await program.methods
         .createGame(new BN(1), null)
         .accounts({
-          game: gameKeypair.publicKey,
+          game: gameKeypair.publicKey, // we dont have a constraint over the seed, so we need to create and reference a keypair for each game, which is not a problem
           creator: provider.publicKey,
         })
         .signers([gameKeypair])

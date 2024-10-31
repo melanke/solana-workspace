@@ -4,9 +4,6 @@
   "private": true,
   "scripts": {
     "anchor": "cd anchor && anchor",
-    "anchor-build": "cd anchor && anchor build",
-    "anchor-localnet": "cd anchor && anchor localnet",
-    "anchor-test": "cd anchor && anchor test -- --config ../jest.config.js",
     "dev": "next dev",
     "build": "next build",
     "start": "next start",

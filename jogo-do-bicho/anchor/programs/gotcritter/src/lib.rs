@@ -7,6 +7,7 @@ use hex;
 
 declare_id!("GsxEDNRJbGhMADyosnm9R2HW6tL4VS2vrpwVhBZkFQaV");
 
+const DISC_SIZE: usize = 8; // the discriminator size
 const ENDING_BET_PERIOD_REWARD: u64 = 10_000_000; // 0.01 SOL em lamports
 const MIN_BET_VALUE: u64 = 10_000_000; // 0.01 SOL em lamports
 
@@ -229,17 +230,7 @@ pub struct CreateGame<'info> {
     #[account(
         init,
         payer = creator,
-        space = 8 + // discriminator
-                32 + // creator: Pubkey
-                4 + (32 * 10) + // participants: Vec<Pubkey> (assumindo um máximo de 10 participantes)
-                8 + // total_value: u64
-                8 + // min_ending_slot: u64
-                32 + // combined_hash: [u8; 32]
-                (8 * 25) + // bets_per_number: [u64; 25]
-                1 + // betting_period_ended: bool
-                1 + 1 + // drawn_number_confirmed: Option<u8>
-                8 + // number_of_bets: u64
-                8 // value_provided_to_winners: u64
+        space = DISC_SIZE + Game::INIT_SPACE, // discriminator + game space
     )]
     pub game: Account<'info, Game>,
     #[account(mut)]
@@ -259,12 +250,7 @@ pub struct PlaceBet<'info> {
     #[account(
         init,
         payer = bettor,
-        space = 8 + // discriminator
-                32 + // game: Pubkey
-                32 + // bettor: Pubkey
-                8 + // value: u64
-                1 + // number: u8
-                1, // prize_claimed: bool
+        space = DISC_SIZE + Bet::INIT_SPACE, // discriminator + bet space
         seeds = [
             b"bet",
             game.key().as_ref(),
@@ -317,8 +303,10 @@ pub struct ClaimPrize<'info> {
 }
 
 #[account]
+#[derive(InitSpace)]
 pub struct Game {
     pub creator: Pubkey,
+    #[max_len(10)] // maximum of 10 participants
     pub participants: Vec<Pubkey>,
     pub total_value: u64,
     pub min_ending_slot: u64,
@@ -331,7 +319,7 @@ pub struct Game {
 }
 
 #[account]
-#[derive(Default)]
+#[derive(Default, InitSpace)]
 pub struct Bet {
     pub game: Pubkey,
     pub bettor: Pubkey,
